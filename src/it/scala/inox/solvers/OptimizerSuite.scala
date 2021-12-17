@@ -104,6 +104,29 @@ class OptimizerSuite extends SolvingTestSuite with DatastructureUtils {
     }
   }
 
+  test("n times n") { implicit ctx =>
+    val x = Variable.fresh("x", Int32Type())
+    val prop = GreaterEquals(Times(x, x), Int32Literal(10))
+
+    val factory = SolverFactory.optimizer(program, ctx)
+    val optimizer = factory.getNewSolver()
+    try {
+      optimizer.assertCnstr(Not(prop))
+      optimizer.minimize(x)
+      optimizer.check(Model) match {
+        case SatWithModel(model) =>
+          println(model)
+          model.vars.get(x.toVal).get match {
+            case Int32Literal(c) => assert(c == 0)
+          }
+        case _ =>
+          fail("Expected sat-with-model")
+      }
+    } finally {
+      factory.reclaim(optimizer)
+    }
+  }
+
   test("binary trees") { implicit ctx =>
     val aTree = Variable.fresh("aTree", T(treeId)(IntegerType()))
     val clause = Equals(E(heightId)(IntegerType())(aTree), IntegerLiteral(BigInt(3)))
